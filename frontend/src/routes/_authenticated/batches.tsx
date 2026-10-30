@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Boxes, AlertTriangle, Ban, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 
@@ -9,11 +9,12 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermissions } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/DataTable";
 import { FormDialog, Field } from "@/components/forms/FormDialog";
 import { MoneyCell } from "@/components/common/MoneyCell";
 import { EntitySelect } from "@/components/forms/EntitySelect";
-import { StatusBadge } from "@/components/common/StatusBadge";
+import { ExpiryBadge, daysUntil } from "@/components/common/ExpiryBadge";
 import { formatDate } from "@/lib/format";
 import { batchesApi, productsApi, suppliersApi } from "@/lib/api/resources";
 import type { Batch } from "@/lib/types";
@@ -31,11 +32,6 @@ const schema = z.object({
   supplier: z.union([z.string(), z.number()]).optional().nullable(),
 });
 type FormValues = z.infer<typeof schema>;
-
-function daysUntil(dateStr: string) {
-  const ms = new Date(dateStr).getTime() - Date.now();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
-}
 
 function BatchesPage() {
   const perms = usePermissions();
@@ -81,55 +77,123 @@ function BatchesPage() {
     save.mutate(parsed.data);
   };
 
+  // Operational metrics
+  const expiredCount = React.useMemo(() => data.filter((b) => daysUntil(b.expiry_date) < 0).length, [data]);
+  const fefoAlertCount = React.useMemo(
+    () => data.filter((b) => {
+      const d = daysUntil(b.expiry_date);
+      return d >= 0 && d <= 30;
+    }).length,
+    [data]
+  );
+  const healthyCount = React.useMemo(() => data.filter((b) => daysUntil(b.expiry_date) > 90).length, [data]);
+
   return (
-    <>
+    <div className="space-y-4">
       <PageHeader
-        title="Batches & expiry"
-        description="Every received lot, with its expiry date. Sales and dispensing draw the earliest-expiring batch first (FEFO)."
+        title="Batches & Expiry (FEFO)"
+        description="Every received lot, with its expiry date. Point of sale and dispensing draw the earliest-expiring batch first automatically."
         actions={
           canCreate ? (
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-1" /> Receive Batch
+            <Button onClick={openCreate} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Receive Batch
             </Button>
           ) : undefined
         }
       />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-border/70 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Active Lots</p>
+              <p className="text-xl font-bold font-mono tracking-tight">{data.length}</p>
+            </div>
+            <Boxes className="h-5 w-5 text-muted-foreground/60" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-500/30 bg-amber-500/5 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">FEFO Priority (≤30d)</p>
+              <p className="text-xl font-bold font-mono tracking-tight text-amber-700 dark:text-amber-300">
+                {fefoAlertCount}
+              </p>
+            </div>
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/30 bg-destructive/5 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-destructive font-medium">Expired Lots</p>
+              <p className="text-xl font-bold font-mono tracking-tight text-destructive">
+                {expiredCount}
+              </p>
+            </div>
+            <Ban className="h-5 w-5 text-destructive" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-500/30 bg-emerald-500/5 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Healthy Shelf Life</p>
+              <p className="text-xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-300">
+                {healthyCount}
+              </p>
+            </div>
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          </CardContent>
+        </Card>
+      </div>
 
       <DataTable<Batch>
         rows={data}
         isLoading={isLoading}
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search batches…"
+        searchPlaceholder="Search batches by lot #, product, or supplier…"
         columns={[
           { key: "product", header: "Product", accessor: (b) => b.product_name },
-          { key: "batch_number", header: "Batch #", accessor: (b) => b.batch_number },
-          { key: "expiry_date", header: "Expiry", render: (b) => {
-              const d = daysUntil(b.expiry_date);
-              return (
-                <div className="flex items-center gap-2">
-                  <span>{formatDate(b.expiry_date)}</span>
-                  {d < 0 ? <StatusBadge status="expired" /> : d <= 30 ? <StatusBadge status="pending" /> : null}
-                </div>
-              );
-            } },
-          { key: "quantity", header: "Qty remaining", className: "text-right", accessor: (b) => b.quantity },
-          { key: "cost_price", header: "Cost/unit", className: "text-right", render: (b) => <MoneyCell value={b.cost_price} /> },
+          {
+            key: "batch_number",
+            header: "Batch / Lot #",
+            render: (b) => <span className="font-mono text-xs font-semibold">{b.batch_number}</span>,
+          },
+          {
+            key: "expiry_date",
+            header: "Expiry Status (FEFO)",
+            render: (b) => <ExpiryBadge date={b.expiry_date} />,
+          },
+          {
+            key: "quantity",
+            header: "Units Available",
+            className: "text-right",
+            render: (b) => (
+              <span className="font-mono text-sm font-semibold tabular-nums">
+                {b.quantity}
+              </span>
+            ),
+          },
+          { key: "cost_price", header: "Cost / Unit", className: "text-right", render: (b) => <MoneyCell value={b.cost_price} /> },
           { key: "supplier", header: "Supplier", accessor: (b) => b.supplier_name ?? "—" },
           { key: "received_date", header: "Received", accessor: (b) => formatDate(b.received_date) },
         ]}
         emptyTitle="No batches yet"
-        emptyDescription="Receive a batch to add stock for a product."
+        emptyDescription="Receive a batch to add stock with FEFO tracking."
       />
 
       <FormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         title="Receive batch"
-        description="Creates a stock-in movement automatically."
+        description="Creates a stock-in movement and assigns lot tracking automatically."
         onSubmit={onSubmit}
         isPending={save.isPending}
-        submitLabel="Receive"
+        submitLabel="Receive batch into inventory"
       >
         <Field label="Product" error={errors.product as string | undefined}>
           <EntitySelect
@@ -142,8 +206,8 @@ function BatchesPage() {
           />
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Batch number" htmlFor="batch_number" error={errors.batch_number}>
-            <Input id="batch_number" value={values.batch_number ?? ""} onChange={(e) => setValues({ ...values, batch_number: e.target.value })} />
+          <Field label="Batch / Lot number" htmlFor="batch_number" error={errors.batch_number}>
+            <Input id="batch_number" value={values.batch_number ?? ""} onChange={(e) => setValues({ ...values, batch_number: e.target.value })} placeholder="e.g. LOT-2026-X" />
           </Field>
           <Field label="Expiry date" htmlFor="expiry_date" error={errors.expiry_date}>
             <Input id="expiry_date" type="date" value={values.expiry_date ?? ""} onChange={(e) => setValues({ ...values, expiry_date: e.target.value })} />
@@ -168,6 +232,6 @@ function BatchesPage() {
           />
         </Field>
       </FormDialog>
-    </>
+    </div>
   );
 }

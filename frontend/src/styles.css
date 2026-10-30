@@ -56,8 +56,7 @@
 }
 
 /* PharmaCare theme — clean clinical white, pharmacy green primary,
-   trustworthy blue accent. Light by default (pharmacy/POS staff work
-   long shifts under bright store lighting; a light UI reads faster). */
+   trustworthy blue accent. Light by default for high dispensary readability. */
 :root {
   --radius: 0.75rem;
 
@@ -103,7 +102,7 @@
   --chart-4: oklch(0.62 0.18 305);
   --chart-5: oklch(0.6 0.21 25);
 
-  /* Sidebar — deep pharmacy green, carries the brand identity */
+  /* Sidebar — deep clinical green */
   --sidebar: oklch(0.24 0.05 155);
   --sidebar-foreground: oklch(0.94 0.01 150);
   --sidebar-primary: oklch(0.58 0.14 240);
@@ -117,6 +116,26 @@
   --gradient-card: linear-gradient(145deg, oklch(1 0 0), oklch(0.98 0.006 230));
   --shadow-glow: 0 0 32px -8px color-mix(in oklab, var(--primary) 30%, transparent);
   --shadow-card: 0 1px 3px 0 oklch(0.24 0.02 255 / 0.08), 0 1px 2px -1px oklch(0.24 0.02 255 / 0.08);
+}
+
+/* Retail Pharmacy Dispensary Mode (Green-forward, clinical precision) */
+[data-tenant="retail"] {
+  --primary: oklch(0.52 0.15 152);
+  --primary-foreground: oklch(0.99 0.005 150);
+  --ring: oklch(0.52 0.15 152);
+  --sidebar: oklch(0.22 0.06 155);
+  --sidebar-border: oklch(0.28 0.07 155);
+}
+
+/* Wholesale Logistics & Depot Mode (Sapphire Navy, bulk B2B operations) */
+[data-tenant="wholesale"] {
+  --primary: oklch(0.48 0.16 250);
+  --primary-foreground: oklch(0.99 0.005 240);
+  --ring: oklch(0.48 0.16 250);
+  --sidebar: oklch(0.20 0.06 250);
+  --sidebar-border: oklch(0.28 0.07 250);
+  --sidebar-primary: oklch(0.58 0.14 152);
+  --sidebar-accent: oklch(0.27 0.07 250);
 }
 
 .dark {
@@ -170,6 +189,14 @@
   --sidebar-ring: oklch(0.68 0.13 235);
 }
 
+.dark[data-tenant="wholesale"],
+[data-tenant="wholesale"].dark {
+  --primary: oklch(0.65 0.16 245);
+  --ring: oklch(0.65 0.16 245);
+  --sidebar: oklch(0.13 0.04 250);
+  --sidebar-accent: oklch(0.19 0.05 250);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -206,5 +233,22 @@
   }
   .shadow-card {
     box-shadow: var(--shadow-card);
+  }
+
+  /* Pharmacy-specific styling utilities */
+  .rx-symbol {
+    font-family: serif;
+    font-weight: 700;
+    font-style: italic;
+  }
+
+  .fefo-strip {
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      color-mix(in oklab, var(--warning) 12%, transparent) 8px,
+      color-mix(in oklab, var(--warning) 12%, transparent) 16px
+    );
   }
 }

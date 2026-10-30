@@ -1,13 +1,29 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, ShoppingCart, Ban, Receipt, Barcode } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  ShoppingCart,
+  Ban,
+  Receipt,
+  Barcode,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  Wallet,
+  Building2,
+  Pill,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePermissions, useRole } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable } from "@/components/data-table/DataTable";
 import { FormDialog, Field } from "@/components/forms/FormDialog";
@@ -39,6 +55,7 @@ function newLine(): LineItem {
 function SalesPage() {
   const perms = usePermissions();
   const { tenantType, isAdmin } = useRole();
+  const isWholesale = tenantType === "wholesale";
   const canCreate = perms.can("create", "sales");
   const canVoid = isAdmin;
   const qc = useQueryClient();
@@ -64,7 +81,7 @@ function SalesPage() {
     queryFn: () => productsApi.list({ page_size: 500 }),
   });
 
-  const priceFor = (p: Product) => Number(tenantType === "wholesale" ? p.wholesale_price : p.retail_price);
+  const priceFor = (p: Product) => (isWholesale ? p.wholesale_price : p.retail_price);
 
   const save = useMutation({
     mutationFn: () =>
@@ -80,7 +97,7 @@ function SalesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Sale completed");
+      toast.success(isWholesale ? "Wholesale order generated" : "Dispensary sale completed");
       setDialogOpen(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Sale failed — check stock availability"),
@@ -91,7 +108,7 @@ function SalesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Sale voided — stock restored");
+      toast.success("Sale voided — stock restored to batches");
       setToVoid(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Void failed"),
@@ -136,12 +153,12 @@ function SalesPage() {
         };
         return blank ? prev.map((l) => (l.key === blank.key ? newEntry : l)) : [...prev, newEntry];
       });
-      toast.success(`Added ${product.name}`);
+      toast.success(`Scanned: ${product.name}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        toast.error(`No product found for "${code}"`);
+        toast.error(`No medicine found for barcode / SKU "${code}"`);
       } else {
-        toast.error(err instanceof Error ? err.message : "Scan lookup failed");
+        toast.error(err instanceof Error ? err.message : "Barcode lookup failed");
       }
     } finally {
       setBarcodeInput("");
@@ -155,49 +172,145 @@ function SalesPage() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!lines.some((l) => l.product)) {
-      toast.error("Add at least one product");
+      toast.error("Please add at least one line item to the order");
       return;
     }
     save.mutate();
   };
 
+  // Operational metrics
+  const completedSales = React.useMemo(() => data.filter((s) => s.status === "completed"), [data]);
+  const totalRevenue = React.useMemo(() => completedSales.reduce((acc, s) => acc + (s.total || 0), 0), [completedSales]);
+
   return (
-    <>
+    <div className="space-y-4">
       <PageHeader
-        title="Point of sale"
-        description={`Ring up a sale at ${tenantType === "wholesale" ? "wholesale" : "retail"} pricing. Stock is drawn from the earliest-expiring batch automatically.`}
-        actions={canCreate ? <Button onClick={openCreate}><ShoppingCart className="h-4 w-4 mr-1" /> New Sale</Button> : undefined}
+        title={isWholesale ? "B2B Order & Logistics Desk" : "Dispensary POS Counter"}
+        description={
+          isWholesale
+            ? "Create wholesale client orders at trade pricing. Stock is automatically deducted from earliest-expiring lots (FEFO)."
+            : "Ring up prescription and OTC medications at retail pricing with automatic FEFO batch allocation."
+        }
+        actions={
+          canCreate ? (
+            <Button onClick={openCreate} className="gap-1.5 shadow-2xs font-medium">
+              <ShoppingCart className="h-4 w-4" />
+              <span>{isWholesale ? "New Wholesale Order" : "Ring Up Sale"}</span>
+            </Button>
+          ) : undefined
+        }
       />
+
+      {/* Operational register cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-border/70 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Settled Orders</p>
+              <p className="text-xl font-bold font-mono tracking-tight">{completedSales.length}</p>
+            </div>
+            <Receipt className="h-5 w-5 text-muted-foreground/60" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Recorded Volume</p>
+              <p className="text-xl font-bold font-mono tracking-tight text-primary">
+                {formatMoney(totalRevenue)}
+              </p>
+            </div>
+            <Wallet className="h-5 w-5 text-primary/70" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Active Price Tier</p>
+              <div className="mt-1 flex items-center gap-1.5">
+                <Badge variant={isWholesale ? "secondary" : "outline"} className="text-xs font-semibold capitalize">
+                  {isWholesale ? "Wholesale Trade" : "Retail Patient RRP"}
+                </Badge>
+              </div>
+            </div>
+            {isWholesale ? <Building2 className="h-5 w-5 text-muted-foreground/60" /> : <Pill className="h-5 w-5 text-muted-foreground/60" />}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 shadow-2xs">
+          <CardContent className="p-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">FEFO Inventory Mode</p>
+              <div className="mt-1 flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Automated</span>
+              </div>
+            </div>
+            <Sparkles className="h-5 w-5 text-emerald-600" />
+          </CardContent>
+        </Card>
+      </div>
 
       <DataTable<Sale>
         rows={data}
         isLoading={isLoading}
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search sales…"
+        searchPlaceholder={isWholesale ? "Search by client or order #…" : "Search sales by customer or #…"}
         columns={[
-          { key: "id", header: "Sale #", render: (s) => (
-              <Link to="/sales/$saleId" params={{ saleId: String(s.id) }} className="text-primary hover:underline font-medium">
+          {
+            key: "id",
+            header: isWholesale ? "Order #" : "Receipt #",
+            render: (s) => (
+              <Link
+                to="/sales/$saleId"
+                params={{ saleId: String(s.id) }}
+                className="text-primary hover:underline font-mono font-medium"
+              >
                 #{s.id}
               </Link>
-          ) },
-          { key: "created_at", header: "Date", accessor: (s) => formatDate(s.created_at) },
-          { key: "customer", header: "Customer", accessor: (s) => s.customer_name ?? "Walk-in" },
-          { key: "sold_by", header: "Cashier", accessor: (s) => s.sold_by_name ?? "—" },
-          { key: "payment_method", header: "Payment", render: (s) => <span className="capitalize">{s.payment_method}</span> },
+            ),
+          },
+          { key: "created_at", header: "Timestamp", accessor: (s) => formatDate(s.created_at) },
+          {
+            key: "customer",
+            header: isWholesale ? "Client Account" : "Patient / Customer",
+            render: (s) => (
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium">{s.customer_name ?? (isWholesale ? "General Account" : "Walk-in Patient")}</span>
+                {!s.customer_name && (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground py-0 px-1 font-mono">
+                    Walk-in
+                  </Badge>
+                )}
+              </div>
+            ),
+          },
+          { key: "sold_by", header: isWholesale ? "Dispatcher" : "Cashier", accessor: (s) => s.sold_by_name ?? "—" },
+          {
+            key: "payment_method",
+            header: "Payment",
+            render: (s) => (
+              <Badge variant="outline" className="capitalize text-xs font-mono font-normal">
+                {s.payment_method}
+              </Badge>
+            ),
+          },
           { key: "status", header: "Status", render: (s) => <StatusBadge status={s.status} /> },
-          { key: "total", header: "Total", className: "text-right", render: (s) => <MoneyCell value={s.total} /> },
+          { key: "total", header: "Total", className: "text-right font-mono font-semibold", render: (s) => <MoneyCell value={s.total} /> },
         ]}
         actions={[
           {
-            label: "View receipt",
+            label: "Print receipt / invoice",
             icon: <Receipt className="h-4 w-4" />,
             onSelect: (s) => navigate({ to: "/sales/$saleId", params: { saleId: String(s.id) } }),
           },
           ...(canVoid
             ? [
                 {
-                  label: "Void sale",
+                  label: "Void transaction",
                   icon: <Ban className="h-4 w-4" />,
                   destructive: true,
                   onSelect: (s: Sale) => s.status !== "void" && setToVoid(s),
@@ -205,68 +318,104 @@ function SalesPage() {
               ]
             : []),
         ]}
-        emptyTitle="No sales yet"
+        emptyTitle="No transactions recorded"
+        emptyDescription={isWholesale ? "Create your first B2B order to record sales." : "Ring up your first dispensary sale."}
       />
 
+      {/* POS / Order Entry Modal */}
       <FormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        title="New sale"
+        title={isWholesale ? "New Wholesale B2B Order" : "Dispensary POS Register"}
+        description="Line items will be allocated automatically from earliest-expiring batches (FEFO)."
         onSubmit={onSubmit}
         isPending={save.isPending}
-        submitLabel="Complete sale"
+        submitLabel={isWholesale ? "Confirm & Dispatch Order" : "Complete & Print Receipt"}
         size="lg"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Customer (optional)">
+          <Field label={isWholesale ? "Client Account" : "Patient / Customer (optional)"}>
             <EntitySelect
               value={customer}
               onChange={(id) => setCustomer(id)}
               queryKey={["customers", "all"]}
               fetcher={() => customersApi.list({ page_size: 500 })}
               getLabel={(c) => c.name}
-              placeholder="Walk-in"
+              placeholder={isWholesale ? "Select client account" : "Walk-in Patient"}
             />
           </Field>
-          <Field label="Payment method">
+          <Field label="Settlement Method">
             <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="mpesa">M-Pesa</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
+                <SelectItem value="cash">
+                  <span className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-emerald-600" /> Cash
+                  </span>
+                </SelectItem>
+                <SelectItem value="mpesa">
+                  <span className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-green-600" /> M-Pesa
+                  </span>
+                </SelectItem>
+                <SelectItem value="card">
+                  <span className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-blue-600" /> Credit / Debit Card
+                  </span>
+                </SelectItem>
+                <SelectItem value="credit">
+                  <span className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-amber-600" /> Client Credit Line
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </Field>
         </div>
 
-        <Field label="Scan barcode" hint="Works with a USB/Bluetooth scanner (types + Enter) or type an SKU and press Enter.">
+        {/* Barcode scanner wedge input */}
+        <Field
+          label="Barcode Scanner / SKU Entry"
+          hint="Scan with USB/Bluetooth barcode reader or type medicine SKU and hit Enter."
+        >
           <div className="relative">
             <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
               onKeyDown={handleBarcodeScan}
-              placeholder="Scan or type a barcode / SKU…"
-              className="pl-8"
+              placeholder="Scan medicine barcode or enter SKU…"
+              className="pl-8 font-mono text-sm"
               disabled={scanning}
               autoFocus
             />
           </div>
         </Field>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Items</label>
-            <Button type="button" variant="outline" size="sm" onClick={() => setLines((p) => [...p, newLine()])}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add item
+        {/* Item table */}
+        <div className="space-y-2 border border-border/80 rounded-lg p-3 bg-muted/20">
+          <div className="flex items-center justify-between pb-1 border-b border-border/60">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Prescription & Product Items ({lines.filter((l) => l.product).length})
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setLines((p) => [...p, newLine()])}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Add Medicine
             </Button>
           </div>
-          <div className="space-y-2">
-            {lines.map((line) => (
-              <div key={line.key} className="flex items-center gap-2">
-                <div className="flex-1">
+
+          <div className="space-y-2 pt-1 max-h-[280px] overflow-y-auto pr-1">
+            {lines.map((line, idx) => (
+              <div key={line.key} className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/60">
+                <span className="text-xs font-mono text-muted-foreground w-4 text-center">{idx + 1}</span>
+                <div className="flex-1 min-w-0">
                   <EntitySelect
                     value={line.product}
                     onChange={(id) => {
@@ -276,20 +425,30 @@ function SalesPage() {
                     queryKey={["products", "all"]}
                     fetcher={() => productsApi.list({ page_size: 500 })}
                     getLabel={(p) => `${p.name} · ${formatMoney(priceFor(p))}`}
-                    placeholder="Select product"
+                    placeholder="Select medicine or supply"
                   />
                 </div>
-                <Input
-                  type="number"
-                  min={1}
-                  className="w-20"
-                  value={line.quantity}
-                  onChange={(e) => setLine(line.key, { quantity: Number(e.target.value) })}
-                />
-                <span className="w-24 text-right text-sm font-mono tabular-nums text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Qty:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="w-18 h-9 text-center font-mono"
+                    value={line.quantity}
+                    onChange={(e) => setLine(line.key, { quantity: Math.max(1, Number(e.target.value)) })}
+                  />
+                </div>
+                <span className="w-24 text-right text-sm font-mono font-semibold tabular-nums text-foreground">
                   {formatMoney((line.unitPrice ?? 0) * line.quantity)}
                 </span>
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(line.key)} disabled={lines.length === 1}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeLine(line.key)}
+                  disabled={lines.length === 1}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -297,13 +456,28 @@ function SalesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Calculation footer */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <Field label="Discount" htmlFor="discount">
-            <Input id="discount" type="number" min={0} step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
+            <Input
+              id="discount"
+              type="number"
+              min={0}
+              step="0.01"
+              value={discount}
+              onChange={(e) => setDiscount(Number(e.target.value))}
+              placeholder="0.00"
+              className="font-mono"
+            />
           </Field>
-          <div className="flex flex-col justify-end text-right">
-            <p className="text-xs text-muted-foreground">Subtotal: {formatMoney(subtotal)}</p>
-            <p className="text-lg font-semibold">{formatMoney(total)}</p>
+          <div className="flex flex-col justify-center items-end bg-card p-3 rounded-lg border border-border/80">
+            <p className="text-xs text-muted-foreground font-mono">Gross Subtotal: {formatMoney(subtotal)}</p>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">Total Due:</span>
+              <span className="text-2xl font-bold font-mono tracking-tight text-primary">
+                {formatMoney(total)}
+              </span>
+            </div>
           </div>
         </div>
       </FormDialog>
@@ -311,12 +485,12 @@ function SalesPage() {
       <ConfirmDialog
         open={!!toVoid}
         onOpenChange={(v) => !v && setToVoid(null)}
-        title={`Void sale #${toVoid?.id}?`}
-        description="Stock will be restored to the batches it was drawn from."
-        confirmLabel="Void sale"
+        title={`Void transaction #${toVoid?.id}?`}
+        description="The sale will be marked as void and stock quantities will be restored back to their originating FEFO batches."
+        confirmLabel="Confirm Void"
         destructive
         onConfirm={() => toVoid && voidMutation.mutate(toVoid.id)}
       />
-    </>
+    </div>
   );
 }
