@@ -1,254 +1,202 @@
-@import "tailwindcss" source(none);
-@source "../src";
-@import "tw-animate-css";
+@import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+@layer base {
+  :root {
+    --background: 215 28% 95%;
+    --foreground: 222 47% 11%;
 
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+    --card: 216 33% 97%;
+    --card-foreground: 222 47% 11%;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+    --popover: 216 33% 97%;
+    --popover-foreground: 222 47% 11%;
 
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-}
+    --primary: 160 84% 33%;
+    --primary-foreground: 160 84% 98%;
 
-/* PharmaCare theme — clean clinical white, pharmacy green primary,
-   trustworthy blue accent. Light by default for high dispensary readability. */
-:root {
-  --radius: 0.75rem;
+    --secondary: 214 25% 88%;
+    --secondary-foreground: 222 47% 14%;
 
-  --background: oklch(0.99 0.004 240);
-  --foreground: oklch(0.24 0.02 255);
+    --muted: 214 20% 90%;
+    --muted-foreground: 215 20% 40%;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.02 255);
+    --accent: 214 22% 87%;
+    --accent-foreground: 222 47% 11%;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.02 255);
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
 
-  /* Pharmacy green — primary actions, active states */
-  --primary: oklch(0.53 0.13 152);
-  --primary-foreground: oklch(0.99 0.005 150);
+    --border: 214 24% 84%;
+    --input: 214 24% 84%;
+    --ring: 160 84% 33%;
 
-  --secondary: oklch(0.95 0.015 220);
-  --secondary-foreground: oklch(0.28 0.03 255);
+    --radius: 0.625rem;
 
-  --muted: oklch(0.96 0.008 230);
-  --muted-foreground: oklch(0.52 0.02 250);
+    --sidebar-background: 224 45% 9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 160 84% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 223 35% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 223 30% 16%;
+    --sidebar-ring: 160 84% 42%;
+  }
 
-  /* Trust blue — links, informational accents, secondary CTAs */
-  --accent: oklch(0.58 0.14 240);
-  --accent-foreground: oklch(0.99 0.005 240);
+  /* RETAIL DISPENSARY CLINICAL SAGE/EMERALD THEME */
+  [data-tenant="retail"] {
+    --background: 162 25% 94%;
+    --foreground: 164 45% 10%;
 
-  --destructive: oklch(0.6 0.21 25);
-  --destructive-foreground: oklch(0.99 0.005 30);
+    --card: 160 28% 96%;
+    --card-foreground: 164 45% 10%;
 
-  --success: oklch(0.58 0.14 152);
-  --success-foreground: oklch(0.99 0.005 150);
+    --popover: 160 28% 96%;
+    --popover-foreground: 164 45% 10%;
 
-  --warning: oklch(0.78 0.15 80);
-  --warning-foreground: oklch(0.24 0.02 255);
+    --primary: 160 84% 32%;
+    --primary-foreground: 0 0% 100%;
 
-  --border: oklch(0.9 0.008 240);
-  --input: oklch(0.9 0.008 240);
-  --ring: oklch(0.53 0.13 152);
+    --secondary: 160 25% 88%;
+    --secondary-foreground: 164 45% 12%;
 
-  --chart-1: oklch(0.53 0.13 152);
-  --chart-2: oklch(0.58 0.14 240);
-  --chart-3: oklch(0.78 0.15 80);
-  --chart-4: oklch(0.62 0.18 305);
-  --chart-5: oklch(0.6 0.21 25);
+    --muted: 160 20% 90%;
+    --muted-foreground: 164 25% 38%;
 
-  /* Sidebar — deep clinical green */
-  --sidebar: oklch(0.24 0.05 155);
-  --sidebar-foreground: oklch(0.94 0.01 150);
-  --sidebar-primary: oklch(0.58 0.14 240);
-  --sidebar-primary-foreground: oklch(0.99 0.005 240);
-  --sidebar-accent: oklch(0.3 0.06 155);
-  --sidebar-accent-foreground: oklch(0.98 0.005 150);
-  --sidebar-border: oklch(0.32 0.06 155);
-  --sidebar-ring: oklch(0.58 0.14 240);
+    --accent: 160 28% 86%;
+    --accent-foreground: 164 50% 10%;
 
-  --gradient-primary: linear-gradient(135deg, oklch(0.53 0.13 152), oklch(0.58 0.14 240));
-  --gradient-card: linear-gradient(145deg, oklch(1 0 0), oklch(0.98 0.006 230));
-  --shadow-glow: 0 0 32px -8px color-mix(in oklab, var(--primary) 30%, transparent);
-  --shadow-card: 0 1px 3px 0 oklch(0.24 0.02 255 / 0.08), 0 1px 2px -1px oklch(0.24 0.02 255 / 0.08);
-}
+    --border: 160 22% 82%;
+    --input: 160 22% 82%;
+    --ring: 160 84% 32%;
 
-/* Retail Pharmacy Dispensary Mode (Green-forward, clinical precision) */
-[data-tenant="retail"] {
-  --primary: oklch(0.52 0.15 152);
-  --primary-foreground: oklch(0.99 0.005 150);
-  --ring: oklch(0.52 0.15 152);
-  --sidebar: oklch(0.22 0.06 155);
-  --sidebar-border: oklch(0.28 0.07 155);
-}
+    --sidebar-background: 166 48% 8%;
+    --sidebar-foreground: 160 30% 96%;
+    --sidebar-primary: 158 80% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 166 40% 14%;
+    --sidebar-accent-foreground: 160 30% 96%;
+    --sidebar-border: 166 35% 15%;
+    --sidebar-ring: 158 80% 40%;
+  }
 
-/* Wholesale Logistics & Depot Mode (Sapphire Navy, bulk B2B operations) */
-[data-tenant="wholesale"] {
-  --primary: oklch(0.48 0.16 250);
-  --primary-foreground: oklch(0.99 0.005 240);
-  --ring: oklch(0.48 0.16 250);
-  --sidebar: oklch(0.20 0.06 250);
-  --sidebar-border: oklch(0.28 0.07 250);
-  --sidebar-primary: oklch(0.58 0.14 152);
-  --sidebar-accent: oklch(0.27 0.07 250);
-}
+  /* WHOLESALE B2B DEPOT LOGISTICS SAPPHIRE/SLATE THEME */
+  [data-tenant="wholesale"] {
+    --background: 218 28% 93%;
+    --foreground: 222 47% 11%;
 
-.dark {
-  --background: oklch(0.16 0.02 255);
-  --foreground: oklch(0.94 0.01 240);
+    --card: 217 30% 96%;
+    --card-foreground: 222 47% 11%;
 
-  --card: oklch(0.2 0.02 255);
-  --card-foreground: oklch(0.94 0.01 240);
+    --popover: 217 30% 96%;
+    --popover-foreground: 222 47% 11%;
 
-  --popover: oklch(0.2 0.02 255);
-  --popover-foreground: oklch(0.94 0.01 240);
+    --primary: 215 88% 44%;
+    --primary-foreground: 0 0% 100%;
 
-  --primary: oklch(0.68 0.14 152);
-  --primary-foreground: oklch(0.14 0.02 155);
+    --secondary: 216 26% 87%;
+    --secondary-foreground: 222 47% 12%;
 
-  --secondary: oklch(0.26 0.02 250);
-  --secondary-foreground: oklch(0.94 0.01 240);
+    --muted: 216 22% 89%;
+    --muted-foreground: 218 24% 38%;
 
-  --muted: oklch(0.24 0.02 250);
-  --muted-foreground: oklch(0.66 0.02 250);
+    --accent: 216 30% 84%;
+    --accent-foreground: 222 47% 10%;
 
-  --accent: oklch(0.68 0.13 235);
-  --accent-foreground: oklch(0.14 0.02 240);
+    --border: 217 24% 81%;
+    --input: 217 24% 81%;
+    --ring: 215 88% 44%;
 
-  --destructive: oklch(0.66 0.2 25);
-  --destructive-foreground: oklch(0.98 0.01 30);
+    --sidebar-background: 224 45% 10%;
+    --sidebar-foreground: 214 32% 95%;
+    --sidebar-primary: 215 88% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 35% 16%;
+    --sidebar-accent-foreground: 214 32% 95%;
+    --sidebar-border: 224 30% 17%;
+    --sidebar-ring: 215 88% 52%;
+  }
 
-  --success: oklch(0.68 0.14 152);
-  --success-foreground: oklch(0.14 0.02 155);
+  .dark {
+    --background: 224 40% 7%;
+    --foreground: 210 40% 98%;
 
-  --warning: oklch(0.8 0.15 85);
-  --warning-foreground: oklch(0.16 0.02 255);
+    --card: 224 38% 10%;
+    --card-foreground: 210 40% 98%;
 
-  --border: oklch(0.3 0.02 250);
-  --input: oklch(0.3 0.02 250);
-  --ring: oklch(0.68 0.14 152);
+    --popover: 224 38% 10%;
+    --popover-foreground: 210 40% 98%;
 
-  --chart-1: oklch(0.68 0.14 152);
-  --chart-2: oklch(0.68 0.13 235);
-  --chart-3: oklch(0.8 0.15 85);
-  --chart-4: oklch(0.68 0.18 305);
-  --chart-5: oklch(0.66 0.2 25);
+    --primary: 160 84% 42%;
+    --primary-foreground: 0 0% 100%;
 
-  --sidebar: oklch(0.14 0.03 155);
-  --sidebar-foreground: oklch(0.9 0.01 150);
-  --sidebar-primary: oklch(0.68 0.13 235);
-  --sidebar-primary-foreground: oklch(0.14 0.02 240);
-  --sidebar-accent: oklch(0.2 0.03 155);
-  --sidebar-accent-foreground: oklch(0.94 0.01 150);
-  --sidebar-border: oklch(0.24 0.03 155);
-  --sidebar-ring: oklch(0.68 0.13 235);
-}
+    --secondary: 223 30% 16%;
+    --secondary-foreground: 210 40% 98%;
 
-.dark[data-tenant="wholesale"],
-[data-tenant="wholesale"].dark {
-  --primary: oklch(0.65 0.16 245);
-  --ring: oklch(0.65 0.16 245);
-  --sidebar: oklch(0.13 0.04 250);
-  --sidebar-accent: oklch(0.19 0.05 250);
+    --muted: 223 30% 16%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 223 30% 18%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 223 30% 18%;
+    --input: 223 30% 18%;
+    --ring: 160 84% 42%;
+  }
+
+  [data-tenant="retail"].dark {
+    --background: 168 45% 6%;
+    --card: 168 40% 9%;
+    --popover: 168 40% 9%;
+    --primary: 158 80% 45%;
+    --border: 168 35% 16%;
+    --input: 168 35% 16%;
+  }
+
+  [data-tenant="wholesale"].dark {
+    --background: 225 45% 7%;
+    --card: 225 40% 10%;
+    --popover: 225 40% 10%;
+    --primary: 215 88% 56%;
+    --border: 225 35% 17%;
+    --input: 225 35% 17%;
+  }
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: hsl(var(--border));
   }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  code, .font-mono {
-    font-family: var(--font-mono);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-@layer utilities {
-  .text-gradient {
-    background-image: var(--gradient-primary);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  .card-gradient {
-    background: var(--gradient-card);
-  }
-  .glow {
-    box-shadow: var(--shadow-glow);
-  }
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
+/* Rx Pill Symbol Indicator */
+.rx-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
 
-  /* Pharmacy-specific styling utilities */
-  .rx-symbol {
-    font-family: serif;
-    font-weight: 700;
-    font-style: italic;
-  }
+/* Subtle texture & warmth to avoid flat clinical sterile starkness */
+.surface-card {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  border-radius: var(--radius);
+}
 
-  .fefo-strip {
-    background: repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 8px,
-      color-mix(in oklab, var(--warning) 12%, transparent) 8px,
-      color-mix(in oklab, var(--warning) 12%, transparent) 16px
-    );
-  }
+.surface-panel {
+  background-color: hsl(var(--card) / 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid hsl(var(--border) / 0.8);
 }
