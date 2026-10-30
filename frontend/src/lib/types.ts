@@ -159,7 +159,13 @@ export interface Customer {
 }
 
 export type SaleStatus = "completed" | "void";
-export type PaymentMethod = "cash" | "mpesa" | "card" | "credit";
+export type PaymentMethod = "cash" | "mpesa" | "card" | "credit" | "split";
+
+export interface SalePayment {
+  id?: ID;
+  payment_method: PaymentMethod;
+  amount: number | string;
+}
 
 export interface SaleItem {
   id?: ID;
@@ -184,8 +190,27 @@ export interface Sale {
   prescription?: ID | null;
   created_at?: string;
   items: SaleItem[];
+  payments?: SalePayment[];
   subtotal?: number | string;
   total?: number | string;
+}
+
+export type ShiftStatus = "open" | "closed";
+
+export interface CashierShift {
+  id: ID;
+  cashier: ID;
+  cashier_name?: string;
+  status: ShiftStatus;
+  opened_at: string;
+  closed_at?: string | null;
+  opening_float: number | string;
+  closing_cash?: number | string | null;
+  expected_cash?: number | string | null;
+  cash_difference?: number | string | null;
+  notes?: string;
+  current_cash_sales?: number | string;
+  estimated_drawer_total?: number | string;
 }
 
 export type PrescriptionStatus = "pending" | "dispensed" | "cancelled";

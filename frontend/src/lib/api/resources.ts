@@ -6,6 +6,7 @@ import type {
   ActivityLogEntry,
   AppUser,
   Batch,
+  CashierShift,
   Category,
   Customer,
   ID,
@@ -129,6 +130,25 @@ export const prescriptionsApi = {
   ...createResource<Prescription>("/prescriptions"),
   async dispense(id: ID) {
     return apiFetch<Prescription>(`/prescriptions/${id}/dispense/`, { method: "POST" });
+  },
+};
+
+export const shiftsApi = {
+  ...createResource<CashierShift>("/shifts"),
+  async current(): Promise<CashierShift | null> {
+    return apiFetch<CashierShift | null>("/shifts/current/");
+  },
+  async openShift(opening_float: number, notes?: string): Promise<CashierShift> {
+    return apiFetch<CashierShift>("/shifts/open_shift/", {
+      method: "POST",
+      body: { opening_float, notes },
+    });
+  },
+  async closeShift(id: ID, closing_cash: number, notes?: string): Promise<CashierShift> {
+    return apiFetch<CashierShift>(`/shifts/${id}/close_shift/`, {
+      method: "POST",
+      body: { closing_cash, notes },
+    });
   },
 };
 

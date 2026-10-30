@@ -64,10 +64,27 @@ function ReceiptPage() {
             <span className="text-muted-foreground">Customer</span>
             <span>{sale.customer_name ?? "Walk-in"}</span>
           </div>
-          <div className="flex justify-between text-sm mb-4">
-            <span className="text-muted-foreground">Payment</span>
-            <span className="capitalize">{sale.payment_method}</span>
-          </div>
+          {sale.payments && sale.payments.length > 1 ? (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Payment</span>
+                <span className="font-medium">Split Payment</span>
+              </div>
+              <div className="pl-2 space-y-0.5 text-xs text-muted-foreground">
+                {sale.payments.map((p, idx) => (
+                  <div key={idx} className="flex justify-between font-mono">
+                    <span className="capitalize">• {p.payment_method}:</span>
+                    <span>{formatMoney(p.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between text-sm mb-4">
+              <span className="text-muted-foreground">Payment</span>
+              <span className="capitalize">{sale.payment_method}</span>
+            </div>
+          )}
 
           <div className="border-t border-dashed border-border my-3" />
 
