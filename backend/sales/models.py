@@ -34,8 +34,9 @@ class Sale(TenantScopedModel):
     MPESA = "mpesa"
     CARD = "card"
     CREDIT = "credit"
+    SPLIT = "split"
     PAYMENT_METHOD_CHOICES = (
-        (CASH, "Cash"), (MPESA, "M-Pesa"), (CARD, "Card"), (CREDIT, "Credit"),
+        (CASH, "Cash"), (MPESA, "M-Pesa"), (CARD, "Card"), (CREDIT, "Credit"), (SPLIT, "Split"),
     )
 
     customer = models.ForeignKey(
@@ -84,3 +85,39 @@ class SaleItem(models.Model):
     @property
     def subtotal(self):
         return self.quantity * self.unit_price
+
+
+class SalePayment(models.Model):
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name="payments")
+    payment_method = models.CharField(max_length=20, choices=Sale.PAYMENT_METHOD_CHOICES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.payment_method}: {self.amount}"
+
+
+class CashierShift(TenantScopedModel):
+    """Tracks a cashier's active drawer/till session, opening float,
+    and closing cash count with discrepancy calculation."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+    STATUS_CHOICES = ((OPEN, "Open"), (CLOSED, "Closed"))
+
+    cashier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="shifts")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=OPEN)
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    opening_float = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    closing_cash = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    expected_cash = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cash_difference = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-opened_at"]
+        base_manager_name = "all_objects"
+
+    def __str__(self):
+        return f"Shift #{self.id} · {self.cashier.username} ({self.status})"
+

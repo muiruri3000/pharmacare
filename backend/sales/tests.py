@@ -4,7 +4,8 @@ from decimal import Decimal
 from core.context import tenant_context
 from core.test_utils import TenantAPITestCase
 from inventory.models import Product, Batch
-from sales.models import Customer, Sale
+from prescriptions.models import Prescription, PrescriptionItem
+from sales.models import Customer, Sale, SalePayment, CashierShift
 
 
 class SalesFlowTests(TenantAPITestCase):
@@ -181,3 +182,93 @@ class SalesFlowTests(TenantAPITestCase):
         self.login_as(self.other_admin)
         res = self.client.get("/api/sales/")
         self.assertEqual(len(self.rows(res.data)), 0)
+
+    def test_sale_with_split_payments(self):
+        self.login_as(self.sales)
+        # 2 tablets @ 6.00 = 12.00 total. Split 5.00 cash + 7.00 mpesa
+        res = self.client.post("/api/sales/", {
+            "payment_method": "split", "discount": 0, "tax": 0,
+            "items": [{"product": self.product.id, "quantity": 2}],
+            "payments": [
+                {"payment_method": "cash", "amount": "5.00"},
+                {"payment_method": "mpesa", "amount": "7.00"},
+            ],
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data["payment_method"], "split")
+        self.assertEqual(len(res.data["payments"]), 2)
+        with tenant_context(self.tenant):
+            payments = SalePayment.objects.filter(sale_id=res.data["id"])
+            self.assertEqual(payments.count(), 2)
+            self.assertEqual(set(p.payment_method for p in payments), {"cash", "mpesa"})
+
+    def test_sale_links_and_completes_prescription(self):
+        self.login_as(self.sales)
+        with tenant_context(self.tenant):
+            customer = Customer.objects.first()
+            rx = Prescription.objects.create(
+                customer=customer, prescribed_by="Dr. Gregory House", notes="Take with water"
+            )
+            PrescriptionItem.objects.create(
+                prescription=rx, product=self.product, quantity=2, dosage_instructions="1 bd"
+            )
+
+        res = self.client.post("/api/sales/", {
+            "customer": customer.id,
+            "prescription": rx.id,
+            "payment_method": "cash", "discount": 0, "tax": 0,
+            "items": [{"product": self.product.id, "quantity": 2}],
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        rx.refresh_from_db()
+        self.assertEqual(rx.status, Prescription.DISPENSED)
+        self.assertEqual(rx.dispensed_by, self.sales)
+        self.assertTrue(all(item.dispensed for item in rx.items.all()))
+
+    def test_cashier_shift_lifecycle_and_reconciliation(self):
+        self.login_as(self.sales)
+        # 1. No current shift yet
+        res = self.client.get("/api/shifts/current/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIsNone(res.data)
+
+        # 2. Open shift with float 1000
+        res = self.client.post("/api/shifts/open_shift/", {
+            "opening_float": "1000.00", "notes": "Morning counter"
+        }, format="json")
+        self.assertEqual(res.status_code, 201)
+        shift_id = res.data["id"]
+        self.assertEqual(Decimal(res.data["opening_float"]), Decimal("1000.00"))
+
+        # Cannot open a second concurrent shift
+        res = self.client.post("/api/shifts/open_shift/", {"opening_float": "500.00"}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+        # 3. Process cash sale (2 tablets @ 6 = 12.00)
+        self.client.post("/api/sales/", {
+            "payment_method": "cash", "discount": 0, "tax": 0,
+            "items": [{"product": self.product.id, "quantity": 2}],
+        }, format="json")
+
+        # 4. Check current shift estimation
+        res = self.client.get("/api/shifts/current/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(Decimal(res.data["current_cash_sales"]), Decimal("12.00"))
+        self.assertEqual(Decimal(res.data["estimated_drawer_total"]), Decimal("1012.00"))
+
+        # 5. Close shift with physical cash count (e.g. 1012.00 exact)
+        res = self.client.post(f"/api/shifts/{shift_id}/close_shift/", {
+            "closing_cash": "1012.00", "notes": "Balanced"
+        }, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["status"], "closed")
+        self.assertEqual(Decimal(res.data["expected_cash"]), Decimal("1012.00"))
+        self.assertEqual(Decimal(res.data["cash_difference"]), Decimal("0.00"))
+
+    def test_cashier_shift_tenant_isolation(self):
+        self.login_as(self.sales)
+        self.client.post("/api/shifts/open_shift/", {"opening_float": "500.00"}, format="json")
+        self.login_as(self.other_admin)
+        res = self.client.get("/api/shifts/")
+        self.assertEqual(len(self.rows(res.data)), 0)
+
